@@ -36,7 +36,7 @@ mvn clean install
 <dependency>
   <groupId>io.github.jesores</groupId>
   <artifactId>uci-client</artifactId>
-  <version>1.0-SNAPSHOT</version>
+  <version>1.0.0</version>
 </dependency>
 ```
 
