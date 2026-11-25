@@ -4,35 +4,37 @@
 [![Java 21+](https://img.shields.io/badge/Java-21%2B-blue)](https://openjdk.org/projects/jdk/21/)
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-green.svg)](LICENSE)
 
-Biblioteca minimalista en **Java 21+ (Maven + JPMS)** para comunicarse de forma **síncrona y asíncrona** con motores de ajedrez compatibles con el protocolo **UCI** (*Universal Chess Interface*), inspirada en `chess.engine` de `python-chess`.
+> 🌐 **Language:** English | [Español](README_es.md)
 
-## Características principales
+Minimalist **Java 21+ (Maven + JPMS)** client library for **synchronous and asynchronous** communication with **UCI** (*Universal Chess Interface*) chess engines, inspired by `python-chess`'s `chess.engine`.
 
-- **Cero dependencias en tiempo de ejecución:** únicamente requiere `java.base`.
-- **Doble API clara:**
-  - `UciClient`: fachada síncrona bloqueante con soporte de *timeouts* y `try-with-resources`.
-  - `AsyncUciClient`: interfaz asíncrona no bloqueante basada en `CompletableFuture`.
-- **Modelos inmutables de Java 21:** `record`, `sealed interface` (`Score`, `EngineOption`) listos para *pattern matching* exhaustivo.
-- **Concurrencia segura:** despacho de eventos `Info` en un hilo dedicado (`uci-callback`), drenado automático de `stderr` y liberación garantizada del subproceso al cerrar o ante fallos.
-- **Alcance acotado:** trabaja exclusivamente con cadenas **FEN** y jugadas en notación coordenada UCI (`e2e4`, `e7e8q`, `e1g1`). No incluye representación de tablero, validación de reglas de ajedrez ni lectura de PGN.
+## Key Features
 
----
-
-## Requisitos
-
-- **Java 21** o superior.
-- **Maven 3.9+** (para compilar o instalar localmente).
-- Un binario ejecutable de cualquier motor UCI instalado en el sistema (por ejemplo, `stockfish`).
+- **Zero runtime dependencies:** requires only `java.base`.
+- **Clean dual API:**
+  - `UciClient`: blocking synchronous facade with configurable timeouts and `try-with-resources` support.
+  - `AsyncUciClient`: non-blocking asynchronous interface powered by `CompletableFuture`.
+- **Immutable Java 21 domain models:** `record` types and `sealed` interfaces (`Score`, `EngineOption`) designed for exhaustive `switch` pattern matching.
+- **Safe concurrency & process management:** ordered `Info` event dispatch on a dedicated thread (`uci-callback`), automatic `stderr` draining, and guaranteed subprocess cleanup on close or failure.
+- **Focused scope:** works strictly with **FEN** strings and UCI coordinate moves (`e2e4`, `e7e8q`, `e1g1`). Does not bundle board representation, chess move validation, or PGN parsing.
 
 ---
 
-## Instalación
+## Requirements
 
-### Opción A: Desde JitPack (recomendado)
+- **Java 21** or newer.
+- **Maven 3.9+** (if building or installing locally from source).
+- Any UCI-compatible chess engine binary installed on your system (e.g., `stockfish`).
+
+---
+
+## Installation
+
+### Option A: Via JitPack (recommended)
 
 #### Maven (`pom.xml`)
 
-Agrega el repositorio de JitPack y la dependencia apuntando al tag de la versión (`v1.0.0`):
+Add the JitPack repository and the dependency pointing to the release tag (`v1.0.0`):
 
 ```xml
 <repositories>
@@ -64,7 +66,7 @@ dependencies {
 }
 ```
 
-### Opción B: Compilar e instalar localmente
+### Option B: Build and install locally
 
 ```bash
 mvn clean install
@@ -78,23 +80,23 @@ mvn clean install
 </dependency>
 ```
 
-### Declarar el módulo JPMS (si tu proyecto usa `module-info.java`)
+### Declare the JPMS module (if your project uses `module-info.java`)
 
 ```java
-module com.ejemplo.miapp {
+module com.example.myapp {
     requires io.github.jesores.uci;
 }
 ```
 
-Paquetes públicos exportados por el módulo:
+Public packages exported by the module:
 - `io.github.jesores.uci.api`
 - `io.github.jesores.uci.model`
 
 ---
 
-## Inicio rápido (API síncrona)
+## Quick Start (Synchronous API)
 
-Usa `UciClient` dentro de un bloque `try-with-resources` para iniciar el motor, completar el *handshake* UCI (`uciok` + `readyok`), analizar una posición y cerrar el subproceso limpiamente:
+Use `UciClient` inside a `try-with-resources` block to launch the engine, complete the UCI handshake (`uciok` + `readyok`), analyze a position, and cleanly shut down the subprocess:
 
 ```java
 import io.github.jesores.uci.api.UciClient;
@@ -105,42 +107,42 @@ import io.github.jesores.uci.model.Position;
 import io.github.jesores.uci.model.Score;
 import java.nio.file.Path;
 
-public class EjemploSincrono {
+public class SyncExample {
     public static void main(String[] args) {
-        Path motor = Path.of("/usr/bin/stockfish");
+        Path enginePath = Path.of("/usr/bin/stockfish");
 
-        try (UciClient client = UciClient.open(motor)) {
-            System.out.println("Motor: " + client.engineId().name().orElse("desconocido"));
+        try (UciClient client = UciClient.open(enginePath)) {
+            System.out.println("Engine: " + client.engineId().name().orElse("unknown"));
 
             client.setOption("Hash", "64");
             client.setOption("Threads", "2");
             client.newGame();
 
-            Position posicion = Position.startpos("e2e4", "e7e5", "g1f3");
-            PlayResult resultado = client.play(posicion, Limit.depth(15));
+            Position position = Position.startpos("e2e4", "e7e5", "g1f3");
+            PlayResult result = client.play(position, Limit.depth(15));
 
-            System.out.println("Mejor jugada: " + resultado.bestMove().orElse("(ninguna)"));
-            System.out.println("Ponder: " + resultado.ponderMove().orElse("-"));
+            System.out.println("Best move: " + result.bestMove().orElse("(none)"));
+            System.out.println("Ponder: " + result.ponderMove().orElse("-"));
 
-            resultado.lastInfo().flatMap(Info::score).ifPresent(score -> {
-                String texto = switch (score) {
-                    case Score.Cp(var valor, var cota) -> valor + " cp (" + cota + ")";
-                    case Score.Mate(var jugadas, var cota) -> "Mate en " + jugadas + " (" + cota + ")";
+            result.lastInfo().flatMap(Info::score).ifPresent(score -> {
+                String eval = switch (score) {
+                    case Score.Cp(var value, var bound) -> value + " cp (" + bound + ")";
+                    case Score.Mate(var moves, var bound) -> "Mate in " + moves + " (" + bound + ")";
                 };
-                System.out.println("Evaluación: " + texto);
+                System.out.println("Evaluation: " + eval);
             });
         }
     }
 }
 ```
 
-> **Nota sobre posiciones terminales:** si la posición está en jaque mate o ahogado y el motor responde `bestmove (none)` o `bestmove 0000`, `resultado.bestMove()` devolverá `Optional.empty()`.
+> **Note on terminal positions:** if the position is checkmate or stalemate and the engine replies `bestmove (none)` or `bestmove 0000`, `result.bestMove()` returns `Optional.empty()`.
 
 ---
 
-## Uso asíncrono (`AsyncUciClient`)
+## Asynchronous Usage (`AsyncUciClient`)
 
-`AsyncUciClient` expone todas las operaciones mediante `CompletableFuture` sin bloquear hilos de la aplicación:
+`AsyncUciClient` exposes every operation via `CompletableFuture` without blocking application threads:
 
 ```java
 import io.github.jesores.uci.api.AsyncUciClient;
@@ -150,53 +152,53 @@ import java.nio.file.Path;
 import java.time.Duration;
 import java.util.concurrent.CompletableFuture;
 
-public class EjemploAsincrono {
+public class AsyncExample {
     public static void main(String[] args) {
-        Path motor = Path.of("/usr/bin/stockfish");
+        Path enginePath = Path.of("/usr/bin/stockfish");
 
-        CompletableFuture<Void> flujo = AsyncUciClient.open(motor).thenCompose(client ->
+        CompletableFuture<Void> pipeline = AsyncUciClient.open(enginePath).thenCompose(client ->
             client.setOption("Hash", "128")
                 .thenCompose(v -> client.newGame())
                 .thenCompose(v -> client.play(
                     Position.startpos("d2d4", "g8f6"),
                     Limit.moveTime(Duration.ofMillis(500)),
                     info -> info.depth().ifPresent(d ->
-                        System.out.println("Profundidad " + d + " -> PV: " + info.pv()))
+                        System.out.println("Depth " + d + " -> PV: " + info.pv()))
                 ))
                 .thenAccept(res ->
-                    System.out.println("Jugada elegida: " + res.bestMove().orElse("(ninguna)")))
+                    System.out.println("Selected move: " + res.bestMove().orElse("(none)")))
                 .whenComplete((ok, err) -> client.closeAsync())
         );
 
-        flujo.join();
+        pipeline.join();
     }
 }
 ```
 
 ---
 
-## Cheat Sheet de la API
+## API Cheat Sheet
 
-### 1. Operaciones del cliente (`UciClient` vs `AsyncUciClient`)
+### 1. Client Operations (`UciClient` vs `AsyncUciClient`)
 
-| Acción | Síncrono (`UciClient` — bloquea el hilo actual) | Asíncrono (`AsyncUciClient` — no bloquea, ideal para GUIs) | Protocolo UCI subyacente |
+| Action | Synchronous (`UciClient` — blocks calling thread) | Asynchronous (`AsyncUciClient` — non-blocking, ideal for GUIs) | Underlying UCI Protocol |
 | :--- | :--- | :--- | :--- |
-| **Abrir motor** | `UciClient.open(path)` / `UciClient.open(config)` | `AsyncUciClient.open(path)` / `AsyncUciClient.open(config)` → `CompletableFuture<AsyncUciClient>` | `uci` → `uciok` + `isready` → `readyok` |
-| **Identidad del motor** | `client.engineId()` → `EngineId` | `asyncClient.engineId()` → `EngineId` | Capturado en `id name` / `id author` |
-| **Opciones disponibles** | `client.options()` → `Map<String, EngineOption>` | `asyncClient.options()` → `Map<String, EngineOption>` | Capturado en `option name ...` |
-| **Estado de sesión** | `client.isOpen()` → `boolean` | `asyncClient.isOpen()` → `boolean` | Estado interno activo |
-| **Verificar disponibilidad** | `client.ping()` / `client.ping(timeout)` | `asyncClient.ping()` → `CompletableFuture<Void>` | `isready` → `readyok` |
-| **Nueva partida** | `client.newGame()` / `client.newGame(timeout)` | `asyncClient.newGame()` → `CompletableFuture<Void>` | `ucinewgame` + `isready` → `readyok` |
-| **Asignar opción** | `client.setOption("Hash", "64")` | `asyncClient.setOption("Hash", "64")` → `CompletableFuture<Void>` | `setoption name ... value ...` + `isready` |
-| **Accionar botón** | `client.triggerButton("Clear Hash")` | `asyncClient.triggerButton("Clear Hash")` → `CompletableFuture<Void>` | `setoption name ...` + `isready` |
-| **Analizar / Jugar** | `client.play(pos, limit)` → `PlayResult` | `asyncClient.play(pos, limit)` → `CompletableFuture<PlayResult>` | `position ...` + `go ...` → `bestmove` |
-| **Analizar con `Info` en vivo** | `client.play(pos, limit, onInfo)` / `client.play(pos, limit, onInfo, timeout)` | `asyncClient.play(pos, limit, onInfo)` → `CompletableFuture<PlayResult>` | Flujo `info ...` en hilo `uci-callback` |
-| **Detener búsqueda** | `client.stop()` | `asyncClient.stop()` → `CompletableFuture<Void>` | `stop` → espera `bestmove` |
-| **Cerrar motor** | `client.close()` *(compatible con `try-with-resources`)* | `asyncClient.closeAsync()` → `CompletableFuture<Void>` / `close()` | `quit` + liberación de proceso y tuberías |
+| **Open engine** | `UciClient.open(path)` / `UciClient.open(config)` | `AsyncUciClient.open(path)` / `AsyncUciClient.open(config)` → `CompletableFuture<AsyncUciClient>` | `uci` → `uciok` + `isready` → `readyok` |
+| **Engine identity** | `client.engineId()` → `EngineId` | `asyncClient.engineId()` → `EngineId` | Captured from `id name` / `id author` |
+| **Available options** | `client.options()` → `Map<String, EngineOption>` | `asyncClient.options()` → `Map<String, EngineOption>` | Captured from `option name ...` |
+| **Session state** | `client.isOpen()` → `boolean` | `asyncClient.isOpen()` → `boolean` | Internal active state |
+| **Check readiness** | `client.ping()` / `client.ping(timeout)` | `asyncClient.ping()` → `CompletableFuture<Void>` | `isready` → `readyok` |
+| **New game** | `client.newGame()` / `client.newGame(timeout)` | `asyncClient.newGame()` → `CompletableFuture<Void>` | `ucinewgame` + `isready` → `readyok` |
+| **Set option** | `client.setOption("Hash", "64")` | `asyncClient.setOption("Hash", "64")` → `CompletableFuture<Void>` | `setoption name ... value ...` + `isready` |
+| **Trigger button** | `client.triggerButton("Clear Hash")` | `asyncClient.triggerButton("Clear Hash")` → `CompletableFuture<Void>` | `setoption name ...` + `isready` |
+| **Analyze / Play** | `client.play(pos, limit)` → `PlayResult` | `asyncClient.play(pos, limit)` → `CompletableFuture<PlayResult>` | `position ...` + `go ...` → `bestmove` |
+| **Analyze with live `Info`** | `client.play(pos, limit, onInfo)` / `client.play(pos, limit, onInfo, timeout)` | `asyncClient.play(pos, limit, onInfo)` → `CompletableFuture<PlayResult>` | `info ...` stream on `uci-callback` thread |
+| **Stop search** | `client.stop()` | `asyncClient.stop()` → `CompletableFuture<Void>` | `stop` → awaits `bestmove` |
+| **Close engine** | `client.close()` *(`try-with-resources` compatible)* | `asyncClient.closeAsync()` → `CompletableFuture<Void>` / `close()` | `quit` + process & pipe teardown |
 
-### 2. Construcción rápida de modelos y lectura de resultados
+### 2. Model Builders & Result Accessors
 
-| Modelo | Cómo crearlo / consultarlo |
+| Model | How to create / inspect |
 | :--- | :--- |
 | **`Position`** | `Position.startpos()` · `Position.startpos("e2e4", "e7e5")` · `Position.fen(fen)` · `Position.fen(fen, "e7e8q")` |
 | **`Limit`** | `Limit.depth(18)` · `Limit.moveTime(Duration.ofMillis(500))` · `Limit.nodes(200_000L)` · `Limit.mate(3)` · `Limit.clock(wtime, btime, winc, binc)` · `Limit.infinite()` · `Limit.builder()...build()` |
@@ -205,88 +207,88 @@ public class EjemploAsincrono {
 | **`Info`** | `info.depth()`, `info.seldepth()`, `info.multipv()`, `info.score()`, `info.nodes()`, `info.nps()`, `info.hashfull()`, `info.tbhits()`, `info.time()`, `info.pv()`, `info.currmove()`, `info.currmovenumber()`, `info.string()` |
 | **`Score`** | `Score.Cp(int value, Score.Bound bound)` · `Score.Mate(int moves, Score.Bound bound)` |
 
-### 3. Regla rápida para interfaces gráficas (JavaFX / Swing)
+### 3. Quick Rule for Desktop GUIs (JavaFX / Swing)
 
-- **Nunca llames `UciClient` en el hilo gráfico** (bloqueará la ventana mientras piensa el motor); usa **`AsyncUciClient`**.
-- Los callbacks `Consumer<Info>` y continuaciones `.thenAccept(...)` se ejecutan en el hilo interno `uci-callback`: envuelve los cambios visuales con `Platform.runLater(...)` (JavaFX) o `SwingUtilities.invokeLater(...)` (Swing).
+- **Never call `UciClient` on the UI thread** (it will freeze the window while the engine thinks); always use **`AsyncUciClient`**.
+- `Consumer<Info>` callbacks and `.thenAccept(...)` continuations run on the internal `uci-callback` thread: wrap UI updates in `Platform.runLater(...)` (JavaFX) or `SwingUtilities.invokeLater(...)` (Swing).
 
 ---
 
-## Guías de uso común
+## Common Usage Guides
 
-### 1. Posiciones con FEN y coronaciones UCI
+### 1. FEN Positions and UCI Promotions
 
-`Position` admite tanto `startpos` como cualquier cadena FEN válida, seguida opcionalmente de jugadas en notación coordenada UCI:
+`Position` accepts both `startpos` and any valid FEN string, optionally followed by moves in UCI coordinate notation:
 
 ```java
-// Desde la posición inicial
-Position apertura = Position.startpos("e2e4", "c7c5", "g1f3");
+// From the starting position
+Position opening = Position.startpos("e2e4", "c7c5", "g1f3");
 
-// Desde un FEN arbitrario + coronación (e7e8q)
-Position finalPeon = Position.fen(
+// From an arbitrary FEN + pawn promotion (e7e8q)
+Position pawnEndgame = Position.fen(
     "8/4P1k1/8/8/8/8/6K1/8 w - - 0 1",
     "e7e8q"
 );
 ```
 
-### 2. Límites de búsqueda y controles de reloj (`Limit`)
+### 2. Search Limits and Clock Controls (`Limit`)
 
 ```java
-// Por profundidad, nodos, mate o tiempo fijo por jugada
-Limit porProfundidad = Limit.depth(20);
-Limit porNodos       = Limit.nodes(500_000L);
-Limit buscarMate     = Limit.mate(4);
-Limit medioSegundo   = Limit.moveTime(Duration.ofMillis(500));
+// By depth, nodes, mate distance, or fixed time per move
+Limit byDepth    = Limit.depth(20);
+Limit byNodes    = Limit.nodes(500_000L);
+Limit findMate   = Limit.mate(4);
+Limit halfSecond = Limit.moveTime(Duration.ofMillis(500));
 
-// Con relojes e incrementos (3 min + 2 s de incremento)
-Limit partidaConReloj = Limit.clock(
-    Duration.ofMinutes(3), // tiempo blancas (wtime)
-    Duration.ofMinutes(3), // tiempo negras (btime)
-    Duration.ofSeconds(2), // incremento blancas (winc)
-    Duration.ofSeconds(2)  // incremento negras (binc)
+// With game clocks and increments (3 min + 2 s increment)
+Limit clockedGame = Limit.clock(
+    Duration.ofMinutes(3), // White remaining time (wtime)
+    Duration.ofMinutes(3), // Black remaining time (btime)
+    Duration.ofSeconds(2), // White increment (winc)
+    Duration.ofSeconds(2)  // Black increment (binc)
 );
 
-// Combinación personalizada con Builder (p. ej. restringir jugadas candidatas)
-Limit personalizado = Limit.builder()
+// Custom combination with Builder (e.g., restricting candidate moves)
+Limit custom = Limit.builder()
     .depth(18)
     .searchMoves(java.util.List.of("e2e4", "d2d4"))
     .movesToGo(25)
     .build();
 ```
 
-### 3. Análisis infinito y detención con `stop()`
+### 3. Infinite Analysis and Stopping with `stop()`
 
-Los callbacks `Consumer<Info>` se ejecutan en orden en un hilo interno dedicado (`uci-callback`) y se garantiza que todos han terminado antes de que `play(...)` devuelva el `PlayResult`:
+`Consumer<Info>` callbacks execute sequentially on a dedicated internal thread (`uci-callback`), and all callbacks are guaranteed to complete before `play(...)` resolves its `PlayResult`:
 
 ```java
-CompletableFuture<PlayResult> busqueda = asyncClient.play(
+CompletableFuture<PlayResult> search = asyncClient.play(
     Position.startpos(),
     Limit.infinite(),
     info -> {
         if (info.depth().orElse(0) >= 16) {
-            asyncClient.stop(); // Idempotente y seguro desde cualquier hilo
+            asyncClient.stop(); // Idempotent and thread-safe from any thread
         }
     }
 );
 
-PlayResult resultado = busqueda.join();
+PlayResult result = search.join();
 ```
 
-### 4. Inspección de opciones anunciadas por el motor (`EngineOption`)
+### 4. Inspecting Engine-Reported Options (`EngineOption`)
 
-Tras abrir el cliente, `options()` devuelve un mapa inmutable con todas las opciones reportadas por el motor durante el *handshake*:
+Once opened, `options()` returns an immutable map containing every option advertised by the engine during the UCI handshake:
 
 ```java
 import io.github.jesores.uci.model.EngineOption;
 
-client.options().values().forEach(opcion -> {
-    switch (opcion) {
+client.options().values().forEach(option -> {
+    switch (option) {
         case EngineOption.Check(var name, var def) ->
             System.out.printf("[check]  %s (default=%s)%n", name, def);
         case EngineOption.Spin(var name, var def, var min, var max) ->
-            System.out.printf("[spin]   %s (default=%d, rango=%d..%d)%n", name, def, min, max);
+            System.out.printf("[spin]   %s (default=%d, range=%d..%d)%n", name, def, min, max);
         case EngineOption.Combo(var name, var def, var choices) ->
-            System.out.printf("[combo]  %s (default=%s, opciones=%s)%n", name, def.orElse("-"), choices);
+            System.out.printf("[combo]  %s (default=%s, choices=%s)%n", name, def.orElse("-"), choices);
         case EngineOption.Button(var name) ->
             System.out.printf("[button] %s%n", name);
         case EngineOption.StringOption(var name, var def) ->
@@ -294,14 +296,14 @@ client.options().values().forEach(opcion -> {
     }
 });
 
-// Accionar una opción tipo button (p. ej. limpiar tabla hash)
+// Trigger a button-type option (e.g., clear hash table)
 client.triggerButton("Clear Hash");
 
-// Limpiar una opción de tipo string (se envía automáticamente como <empty> según UCI)
+// Clear a string-type option (automatically sent as <empty> per UCI spec)
 client.setOption("SyzygyPath", "");
 ```
 
-### 5. Configuración avanzada del proceso y *timeouts* (`UciConfig`)
+### 5. Advanced Process & Timeout Configuration (`UciConfig`)
 
 ```java
 import io.github.jesores.uci.api.UciConfig;
@@ -324,24 +326,24 @@ try (UciClient client = UciClient.open(config)) {
 
 ---
 
-## Cierre recomendado de conexiones y ciclo de vida
+## Recommended Lifecycle & Connection Shutdown
 
-Cada cliente abierto mantiene un subproceso nativo del motor UCI y tres hilos `daemon` internos (`uci-reader`, `uci-stderr`, `uci-callback`). Sigue estas prácticas según el tipo de aplicación:
+Each open client manages a native UCI engine subprocess and three internal `daemon` threads (`uci-reader`, `uci-stderr`, `uci-callback`). Follow these practices based on your application type:
 
-### 1. Aplicaciones CLI, servicios y *virtual threads* (`UciClient`)
-Usa siempre **`try-with-resources`** para garantizar el envío de `quit` y la liberación inmediata del subproceso incluso si ocurre una excepción:
+### 1. CLI Apps, Backend Services, and Virtual Threads (`UciClient`)
+Always use **`try-with-resources`** to guarantee sending `quit` and immediately releasing the subprocess even if an exception is thrown:
 
 ```java
 try (UciClient client = UciClient.open(Path.of("/usr/bin/stockfish"))) {
     PlayResult res = client.play(Position.startpos(), Limit.depth(12));
-} // envía quit -> cierra tuberías -> destroy/destroyForcibly si no responde
+} // sends quit -> closes pipes -> destroy/destroyForcibly if unresponsive
 ```
 
-### 2. Aplicaciones JavaFX (`AsyncUciClient`)
-Cierra explícitamente el cliente en el método `Application.stop()` (invocado por JavaFX al cerrar la ventana o llamar a `Platform.exit()`), y cierra siempre el motor anterior antes de abrir otro si el usuario cambia de motor en tiempo de ejecución:
+### 2. JavaFX Applications (`AsyncUciClient`)
+Explicitly close the client inside `Application.stop()` (invoked by JavaFX when the window closes or `Platform.exit()` is called), and always close any previous engine before opening a new one if the user switches engines at runtime:
 
 ```java
-public class MiAppAjedrez extends Application {
+public class MyChessApp extends Application {
     private AsyncUciClient engine;
 
     @Override
@@ -353,8 +355,8 @@ public class MiAppAjedrez extends Application {
 }
 ```
 
-### 3. Aplicaciones Swing (`AsyncUciClient`)
-Registra el cierre en el `WindowListener` de la ventana principal:
+### 3. Swing Applications (`AsyncUciClient`)
+Register shutdown cleanup in the main window's `WindowListener`:
 
 ```java
 frame.addWindowListener(new WindowAdapter() {
@@ -367,48 +369,48 @@ frame.addWindowListener(new WindowAdapter() {
 });
 ```
 
-### 4. Flujos asíncronos encadenados (`CompletableFuture`)
-Asegura la liberación en `whenComplete` al terminar la cadena asíncrona:
+### 4. Chained Asynchronous Pipelines (`CompletableFuture`)
+Ensure cleanup inside `whenComplete` at the end of the async chain:
 
 ```java
-AsyncUciClient.open(motor).thenCompose(client ->
+AsyncUciClient.open(enginePath).thenCompose(client ->
     client.play(Position.startpos(), Limit.depth(10))
           .whenComplete((res, err) -> client.closeAsync())
 );
 ```
 
-### Red de seguridad automática (`ShutdownHook`)
-Además del cierre explícito, la biblioteca registra automáticamente un **`ShutdownHook` en la JVM** (`uci-shutdown-hook`) por cada proceso lanzado:
-- Si la aplicación termina (`Platform.exit()`, `System.exit()`, `Ctrl+C` o `SIGTERM`) y se olvidó invocar `close()`, el hook envía `quit`, espera brevemente y ejecuta `destroy()` / `destroyForcibly()` para evitar procesos huérfanos consumiendo CPU.
-- Cuando sí llamas `close()` / `closeAsync()`, el hook se **desregistra automáticamente** para no retener memoria durante sesiones largas.
-- *(Nota del sistema operativo: una terminación abrupta por `SIGKILL` / `kill -9` mata a la JVM desde el kernel sin ejecutar código Java).*
+### Automatic Safety Net (`ShutdownHook`)
+In addition to explicit closing, the library automatically registers a **JVM `ShutdownHook`** (`uci-shutdown-hook`) for every launched process:
+- If the application exits (`Platform.exit()`, `System.exit()`, `Ctrl+C`, or `SIGTERM`) and `close()` was forgotten, the hook sends `quit`, waits briefly, and invokes `destroy()` / `destroyForcibly()` to prevent orphaned engine processes from consuming CPU.
+- When you explicitly call `close()` / `closeAsync()`, the hook is **automatically unregistered** so long-running sessions never leak memory.
+- *(OS note: an abrupt `SIGKILL` / `kill -9` terminates the JVM directly from the kernel without executing Java shutdown hooks).*
 
 ---
 
-## Manejo de errores y garantías de concurrencia
+## Error Handling & Concurrency Guarantees
 
-Todas las excepciones de la biblioteca extienden de `UciException` (`RuntimeException`):
+All library exceptions extend `UciException` (`RuntimeException`):
 
-| Excepción | Cuándo ocurre |
+| Exception | When it occurs |
 | :--- | :--- |
-| `UciTimeoutException` | El *handshake* o una operación supera el tiempo máximo configurado. Si ocurre durante `play(...)`, el cliente envía `stop` automáticamente al motor. |
-| `UciProtocolException` | Uso inválido del estado UCI (por ejemplo, lanzar dos búsquedas `play(...)` simultáneas o invocar `setOption(...)` / `newGame()` mientras hay una búsqueda activa). |
-| `UciEngineTerminatedException` | El proceso del motor termina de forma inesperada (`EOF`), falla la tubería de E/S o se invoca una operación sobre un cliente cerrado. |
-| `UciException` | Fallo general al lanzar el proceso ejecutable o interrupción de hilo durante una espera síncrona. |
+| `UciTimeoutException` | Handshake or an operation exceeds its configured timeout. If triggered during `play(...)`, the client automatically sends `stop` to the engine. |
+| `UciProtocolException` | Invalid UCI session state usage (e.g., starting two concurrent `play(...)` searches or calling `setOption(...)` / `newGame()` while a search is active). |
+| `UciEngineTerminatedException` | The engine subprocess exits unexpectedly (`EOF`), an I/O pipe fails, or an operation is called on a closed client. |
+| `UciException` | General failure launching the engine executable or thread interruption while waiting synchronously. |
 
-### Reglas de concurrencia
-- **Una búsqueda a la vez:** el protocolo UCI no permite dos comandos `go` concurrentes sobre el mismo proceso.
-- **Operaciones permitidas durante una búsqueda:** `stop()`, `ping()` (`isready`/`readyok`) y `close()` / `closeAsync()` son seguros de invocar desde cualquier hilo mientras `play(...)` está en ejecución.
+### Concurrency Rules
+- **One search at a time:** the UCI protocol does not allow two concurrent `go` commands on the same engine process.
+- **Operations allowed during an active search:** `stop()`, `ping()` (`isready`/`readyok`), and `close()` / `closeAsync()` are thread-safe to invoke from any thread while `play(...)` is running.
 
 ---
 
-## Diagnóstico y trazas del protocolo UCI
+## Diagnostics & UCI Protocol Tracing
 
-La biblioteca utiliza exclusivamente `System.Logger` del JDK (`io.github.jesores.uci.*`):
-- Nivel `TRACE`: registra cada línea enviada (`>>`) y recibida (`<<`) por `stdin`/`stdout`.
-- Nivel `DEBUG`: registra el arranque/cierre del subproceso y la salida `stderr` del motor.
+The library exclusively uses the JDK's `System.Logger` (`io.github.jesores.uci.*`):
+- `TRACE` level: logs every raw line sent (`>>`) and received (`<<`) over `stdin`/`stdout`.
+- `DEBUG` level: logs subprocess startup/teardown and any engine `stderr` output.
 
-Para habilitar las trazas con el backend por defecto del JDK (`java.util.logging`), crea un archivo `logging.properties`:
+To enable protocol traces using the default JDK backend (`java.util.logging`), create a `logging.properties` file:
 
 ```properties
 handlers = java.util.logging.ConsoleHandler
@@ -416,15 +418,15 @@ java.util.logging.ConsoleHandler.level = ALL
 io.github.jesores.uci.level = ALL
 ```
 
-Y ejecuta tu aplicación con:
+And launch your application with:
 
 ```bash
-java -Djava.util.logging.config.file=logging.properties -jar mi-app.jar
+java -Djava.util.logging.config.file=logging.properties -jar my-app.jar
 ```
 
 ---
 
-## Desarrollo y pruebas
+## Development & Testing
 
 ```bash
 mvn test
