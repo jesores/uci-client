@@ -1,5 +1,9 @@
 # uci-client
 
+[![JitPack](https://jitpack.io/v/jesores/uci-client.svg)](https://jitpack.io/#jesores/uci-client)
+[![Java 21+](https://img.shields.io/badge/Java-21%2B-blue)](https://openjdk.org/projects/jdk/21/)
+[![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-green.svg)](LICENSE)
+
 Biblioteca minimalista en **Java 21+ (Maven + JPMS)** para comunicarse de forma **síncrona y asíncrona** con motores de ajedrez compatibles con el protocolo **UCI** (*Universal Chess Interface*), inspirada en `chess.engine` de `python-chess`.
 
 ## Características principales
@@ -24,13 +28,47 @@ Biblioteca minimalista en **Java 21+ (Maven + JPMS)** para comunicarse de forma 
 
 ## Instalación
 
-### 1. Instalar en el repositorio Maven local
+### Opción A: Desde JitPack (recomendado)
+
+#### Maven (`pom.xml`)
+
+Agrega el repositorio de JitPack y la dependencia apuntando al tag de la versión (`v1.0.0`):
+
+```xml
+<repositories>
+  <repository>
+    <id>jitpack.io</id>
+    <url>https://jitpack.io</url>
+  </repository>
+</repositories>
+
+<dependencies>
+  <dependency>
+    <groupId>com.github.jesores</groupId>
+    <artifactId>uci-client</artifactId>
+    <version>v1.0.0</version>
+  </dependency>
+</dependencies>
+```
+
+#### Gradle (`build.gradle.kts`)
+
+```kotlin
+repositories {
+    mavenCentral()
+    maven("https://jitpack.io")
+}
+
+dependencies {
+    implementation("com.github.jesores:uci-client:v1.0.0")
+}
+```
+
+### Opción B: Compilar e instalar localmente
 
 ```bash
 mvn clean install
 ```
-
-### 2. Agregar la dependencia en `pom.xml`
 
 ```xml
 <dependency>
@@ -40,7 +78,7 @@ mvn clean install
 </dependency>
 ```
 
-### 3. Declarar el módulo JPMS (si tu proyecto usa `module-info.java`)
+### Declarar el módulo JPMS (si tu proyecto usa `module-info.java`)
 
 ```java
 module com.ejemplo.miapp {
