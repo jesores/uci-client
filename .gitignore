@@ -1,0 +1,46 @@
+# Compilados y empaquetados de Java
+*.class
+*.jar
+*.war
+*.ear
+
+# Directorio de salida y archivos temporales de Maven
+target/
+pom.xml.tag
+pom.xml.releaseBackup
+pom.xml.versionsBackup
+pom.xml.next
+release.properties
+dependency-reduced-pom.xml
+buildNumber.properties
+.mvn/timing.properties
+.mvn/wrapper/maven-wrapper.jar
+
+# Logs de errores de la JVM
+hs_err_pid*
+replay_pid*
+
+# IDEs (IntelliJ, NetBeans, Eclipse, VS Code)
+.idea/
+*.iml
+*.iws
+*.ipr
+out/
+nbproject/private/
+nbbuild/
+dist/
+nbdist/
+.classpath
+.project
+.settings/
+.vscode/
+
+# Archivos de configuración local / entorno
+.env
+*.db
+*.sqlite3
+
+# Temporales del sistema operativo
+*~
+.DS_Store
+Thumbs.db
